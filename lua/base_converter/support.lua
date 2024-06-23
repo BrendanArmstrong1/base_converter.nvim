@@ -23,12 +23,29 @@ M.get_bounds = function()
 end
 
 M.build_visual_selection = function(y1, y2, x1, x2)
+  local mode = vim.fn.visualmode()
   local visual_selection = {}
   local index = 1
   for i = y1 - 1, y2 - 1, 1 do
+    local line_segment
+    if mode == "V" then
+      line_segment = vim.api.nvim_buf_get_lines(0, i, i + 1, false)
+    elseif mode == "" then
+      line_segment = vim.api.nvim_buf_get_text(0, i, x1, i, x2 + 1, {})[1]
+    elseif mode == "v" then
+      if i == y1 - 1 then
+        local full_line_segment = vim.api.nvim_buf_get_lines(0, i, i + 1, false)
+        line_segment = string.sub(full_line_segment[1], x1+1)
+      elseif i == y2 - 1 then
+        local full_line_segment = vim.api.nvim_buf_get_lines(0, i, i + 1, false)
+        line_segment = string.sub(full_line_segment[1], 1, x1+2)
+      else
+        line_segment = vim.api.nvim_buf_get_lines(0, i, i + 1, false)[1]
+      end
+    end
     visual_selection[index] = {
       index + y1 - 1,
-      vim.api.nvim_buf_get_text(0, i, x1, i, x2 + 1, {})[1],
+      line_segment,
     }
     index = index + 1
   end
@@ -58,5 +75,33 @@ M.get_lines = function(y1)
   return wrapper
 end
 
+M.string_from_hex = function(arg)
+  local hex_string
+  local chunk_size = 2
+  local s = {}
+
+  -- make sure hex hase even number of digits
+  if math.fmod(#arg, 2) == 1 then
+    hex_string = "0" .. arg
+  else
+    hex_string = arg
+  end
+
+  for i = 1, #hex_string, chunk_size do
+    s[#s + 1] = string.char(tonumber(string.sub(hex_string, i, i + chunk_size - 1), 16))
+  end
+
+  return table.concat(s, "")
+end
+
+M.string_to_hex = function(arg)
+  local s = {}
+  local char
+  for i = 1, #arg do
+    char = string.sub(arg, i, i)
+    table.insert(s, string.format("%02x", string.byte(char)))
+  end
+  return table.concat(s, "")
+end
 
 return M
